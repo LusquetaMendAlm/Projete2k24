@@ -2,6 +2,7 @@
 #include "time.h"
 #include "esp_sntp.h"
 #include <HX711.h>
+#include "BluetoothSerial.h"
 
 // DEFINIÇÕES DE PINOS
 #define pinDT  22
@@ -15,13 +16,11 @@
 
 //INICIANDO OBJETOS
 HX711 scale;
+BluetoothSerial SerialBT;
 
 // DECLARAÇÃO DE VARIÁVEIS  
 float Medida=0;
-
-//REDE
-const char *ssid = "alunos";
-const char *password = "etefmc123";
+int Refeicoes;
 //const char *ssid = "VICENTE";
 //const char *password = "cambalacho";
 
@@ -70,18 +69,7 @@ void timeavailable(struct timeval *t) {
 void setup() {
   Serial.begin(115200);
 
-  //Connecting to Wifi
-  Serial.printf("Connecting to %s", ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println(" CONNECTED");
-
-  sntp_set_time_sync_notification_cb(timeavailable);
-
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
+  SerialBT.begin("DispenserPetCare"); //NOME DA PERFIL BLUETOOTH
 
   scale.begin(pinDT, pinSCK); // CONFIGURANDO OS PINOS DA BALANÇA
   scale.set_scale(Escala); // ENVIANDO O VALOR DA ESCALA CALIBRADO
@@ -93,6 +81,29 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(1000);
-  printLocalTime();
+  if(Serial.available()) {
+    const char *ssid = SerialBT.read();
+    Serial.println("SSID recebido");
+  }
+  if(Serial.available() && *ssid != null) {
+    const char *password = SerialBT.read();
+    Serial.println("Senha recebido");
+    
+  }
+  if(*ssid != null && *password != null) {
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("Wifi conectado");
+
+    sntp_set_time_sync_notification_cb(timeavailable);
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer1, ntpServer2);
+
+    if(Serial.available()) {
+      Refeicoes = SerialBT.read();
+      
+    }
+  }
 }
